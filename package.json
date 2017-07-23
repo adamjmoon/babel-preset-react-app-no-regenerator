@@ -1,0 +1,19 @@
+{
+  "name": "babel-preset-react-app-no-regenerator",
+  "version": "1.0.0",
+  "description": "React App Babel Preset without Regenerator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "create-react-app",
+    "react-app",
+    "react",
+    "regenerator",
+    "babel",
+    "preset"
+  ],
+  "author": "Adam Moon",
+  "license": "ISC"
+}
