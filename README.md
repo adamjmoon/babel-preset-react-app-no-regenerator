@@ -5,7 +5,14 @@ Babel Preset like react-app from create-react-app without using Regenerator.
 
 We can combine with babel-preset-env to manage which version of modern browser I want to target in development.
 
-In app built with create-react-app, make the following adjustments to package.json file
+1. we need to set `NODE_ENV` environment variable:
+
+OSX: `export NODE_ENV=development`
+Windows: `SET NODE_ENV=development`
+
+2. `yarn add babel-preset-react-app-no-regenerator && yarn add babel-preset-env`
+
+3. make the following adjustments to package.json file
 
 ````
 "babel" : {
@@ -48,3 +55,4 @@ In app built with create-react-app, make the following adjustments to package.js
   }
 ````
 
+4. `yarn start`
