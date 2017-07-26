@@ -7,8 +7,8 @@ We can combine with babel-preset-env to manage which version of modern browser I
 
 1. we need to set `NODE_ENV` environment variable:
 
-OSX: `export NODE_ENV=development`
-Windows: `SET NODE_ENV=development`
+  * OSX: `export NODE_ENV=development`
+  * Windows: `SET NODE_ENV=development`
 
 2. `yarn add babel-preset-react-app-no-regenerator && yarn add babel-preset-env`
 
@@ -54,5 +54,3 @@ Windows: `SET NODE_ENV=development`
     }
   }
 ````
-
-4. `yarn start`
