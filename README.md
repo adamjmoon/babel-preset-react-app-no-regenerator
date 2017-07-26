@@ -45,6 +45,6 @@ In app built with create-react-app, make the following adjustments to package.js
         ]
       }
     }
-  },
+  }
 ````
 
