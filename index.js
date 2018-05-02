@@ -1,86 +1,128 @@
 /**
  * Copyright (c) 2015-present, Facebook, Inc.
- * All rights reserved.
  *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 'use strict';
 
-var path = require('path');
-
-const plugins = [
-    // class { handleClick = () => { } }
-    require.resolve('babel-plugin-transform-class-properties'),
-    // { ...todo, completed: true }
-    require.resolve('babel-plugin-transform-object-rest-spread'),
-    // Polyfills the runtime needed for async/await and generators
-    [require.resolve('babel-plugin-transform-runtime'), {
-      helpers: false,
-      polyfill: false,
-      regenerator: false,
-      // Resolve the Babel runtime relative to the config.
-      moduleName: path.dirname(require.resolve('babel-runtime/package'))
-    }]
-  ];
-
-// This is similar to how `env` works in Babel:
-// https://babeljs.io/docs/usage/babelrc/#env-option
-// We are not using `env` because it’s ignored in versions > babel-core@6.10.4:
-// https://github.com/babel/babel/issues/4539
-// https://github.com/facebookincubator/create-react-app/issues/720
-// It’s also nice that we can enforce `NODE_ENV` being specified.
-var env = process.env.BABEL_ENV || process.env.NODE_ENV;
-if (env !== 'development' && env !== 'test' && env !== 'production') {
-  throw new Error(
-    'Using `babel-preset-react-app` requires that you specify `NODE_ENV` or '+
-    '`BABEL_ENV` environment variables. Valid values are "development", ' +
-    '"test", and "production". Instead, received: ' + JSON.stringify(env) + '.'
-  );
-}
-
-if (env === 'development' || env === 'test') {
-  plugins.push.apply(plugins, [
-    // Adds component stack to warning messages
-    require.resolve('babel-plugin-transform-react-jsx-source'),
-    // Adds __self attribute to JSX which React will use for some warnings
-    require.resolve('babel-plugin-transform-react-jsx-self')
-  ]);
-}
-
-if (env === 'test') {
-  module.exports = {
-    presets: [
-      // ES features necessary for user's Node version
-      [require('babel-preset-env').default, {
-        targets: {
-          node: parseFloat(process.versions.node),
-        },
-      }],
-      // JSX, Flow
-      require.resolve('babel-preset-react')
-    ],
-    plugins: plugins
-  };
-} else {
-  module.exports = {
-    presets: [
-      // JSX, Flow
-      require.resolve('babel-preset-react')
-    ],
-    plugins: plugins
-  };
-
-  if (env === 'production') {
-    // Optimization: hoist JSX that never changes out of render()
-    // Disabled because of issues:
-    // * https://github.com/facebookincubator/create-react-app/issues/525
-    // * https://phabricator.babeljs.io/search/query/pCNlnC2xzwzx/
-    // * https://github.com/babel/babel/issues/4516
-    // TODO: Enable again when these issues are resolved.
-    // plugins.push.apply(plugins, [
-    //   require.resolve('babel-plugin-transform-react-constant-elements')
-    // ]);
+const validateBoolOption = (name, value, defaultValue) => {
+  if (typeof value === 'undefined') {
+    value = defaultValue;
   }
-}
+
+  if (typeof value !== 'boolean') {
+    throw new Error(`Preset react-app: '${name}' option must be a boolean.`);
+  }
+
+  return value;
+};
+
+module.exports = function(api, opts) {
+  if (!opts) {
+    opts = {};
+  }
+
+  // This is similar to how `env` works in Babel:
+  // https://babeljs.io/docs/usage/babelrc/#env-option
+  // We are not using `env` because it’s ignored in versions > babel-core@6.10.4:
+  // https://github.com/babel/babel/issues/4539
+  // https://github.com/facebook/create-react-app/issues/720
+  // It’s also nice that we can enforce `NODE_ENV` being specified.
+  var env = process.env.BABEL_ENV || process.env.NODE_ENV;
+  var isEnvDevelopment = env === 'development';
+  var isEnvProduction = env === 'production';
+  var isEnvTest = env === 'test';
+  var isFlowEnabled = validateBoolOption('flow', opts.flow, true);
+
+  if (!isEnvDevelopment && !isEnvProduction && !isEnvTest) {
+    throw new Error(
+      'Using `babel-preset-react-app` requires that you specify `NODE_ENV` or ' +
+        '`BABEL_ENV` environment variables. Valid values are "development", ' +
+        '"test", and "production". Instead, received: ' +
+        JSON.stringify(env) +
+        '.'
+    );
+  }
+
+  return {
+    presets: [
+      isEnvTest && [
+        // ES features necessary for user's Node version
+        require('@babel/preset-env').default,
+        {
+          targets: {
+            node: '6.12',
+          },
+        },
+      ],
+      (isEnvProduction || isEnvDevelopment) && [
+        // Latest stable ECMAScript features
+        require('@babel/preset-env').default,
+        {
+          // `entry` transforms `@babel/polyfill` into individual requires for
+          // the targeted browsers. This is safer than `usage` which performs
+          // static code analysis to determine what's required.
+          // This is probably a fine default to help trim down bundles when
+          // end-users inevitably import '@babel/polyfill'.
+          useBuiltIns: 'entry',
+          // Do not transform modules to CJS
+          modules: false,
+        },
+      ],
+      [
+        require('@babel/preset-react').default,
+        {
+          // Adds component stack to warning messages
+          // Adds __self attribute to JSX which React will use for some warnings
+          development: isEnvDevelopment || isEnvTest,
+          // Will use the native built-in instead of trying to polyfill
+          // behavior for any plugins that require one.
+          useBuiltIns: true,
+        },
+      ],
+      isFlowEnabled && [require('@babel/preset-flow').default],
+    ].filter(Boolean),
+    plugins: [
+      // Experimental macros support. Will be documented after it's had some time
+      // in the wild.
+      require('babel-plugin-macros'),
+      // Necessary to include regardless of the environment because
+      // in practice some other transforms (such as object-rest-spread)
+      // don't work without it: https://github.com/babel/babel/issues/7215
+      require('@babel/plugin-transform-destructuring').default,
+      // class { handleClick = () => { } }
+      require('@babel/plugin-proposal-class-properties').default,
+      // The following two plugins use Object.assign directly, instead of Babel's
+      // extends helper. Note that this assumes `Object.assign` is available.
+      // { ...todo, completed: true }
+      [
+        require('@babel/plugin-proposal-object-rest-spread').default,
+        {
+          useBuiltIns: true,
+        },
+      ],
+      // Polyfills the runtime needed for async/await and generators
+      [
+        require('@babel/plugin-transform-runtime').default,
+        {
+          helpers: false,
+          polyfill: false,
+          regenerator: false,
+        },
+      ],
+      isEnvProduction && [
+        // Remove PropTypes from production build
+        require('babel-plugin-transform-react-remove-prop-types').default,
+        {
+          removeImport: true,
+        },
+      ],
+      // Adds syntax support for import()
+      require('@babel/plugin-syntax-dynamic-import').default,
+      isEnvTest &&
+        // Transform dynamic import to require
+        require('babel-plugin-transform-dynamic-import').default,
+    ].filter(Boolean),
+  };
+};
