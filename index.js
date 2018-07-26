@@ -1,22 +1,27 @@
 'use strict';
 
-const validateBoolOption = (name, value, defaultValue) => {
-  if (typeof value === 'undefined') {
-    value = defaultValue;
-  }
+import { declare } from "@babel/helper-plugin-utils";
+import transformFlowStripTypes from "@babel/plugin-transform-flow-strip-types";
 
-  if (typeof value !== 'boolean') {
-    throw new Error(`Preset react-app: '${name}' option must be a boolean.`);
-  }
+export default declare((api, opts, env) => {
+  api.assertVersion(7);
 
-  return value;
-};
-
-module.exports = function(api, opts, env) {
   if (!opts) {
     opts = {};
   }
 
+  const validateBoolOption = (name, value, defaultValue) => {
+    if (typeof value === 'undefined') {
+      value = defaultValue;
+    }
+  
+    if (typeof value !== 'boolean') {
+      throw new Error(`Preset react-app: '${name}' option must be a boolean.`);
+    }
+  
+    return value;
+  };
+  
   var isEnvDevelopment = env === 'development';
   var isEnvProduction = env === 'production';
   var isEnvTest = env === 'test';
@@ -120,4 +125,9 @@ module.exports = function(api, opts, env) {
         require('babel-plugin-transform-dynamic-import').default,
     ].filter(Boolean),
   };
-};
+
+  return {
+    plugins: [[transformFlowStripTypes, { all }]],
+  };
+});
+
